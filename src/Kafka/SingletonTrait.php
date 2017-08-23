@@ -6,13 +6,17 @@
  * Time: 14:12
  */
 
+namespace Kafka;
+
+use Psr\Log\LoggerAwareTrait;
+
 /**
  * Class SingletonTrait
  */
 trait SingletonTrait {
 
-    use \Psr\Log\LoggerAwareTrait;
-    use \Kafka\LoggerTrait;
+    use LoggerAwareTrait;
+    use LoggerTrait;
 
     protected static $instance = null;
 

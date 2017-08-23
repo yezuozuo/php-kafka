@@ -11,7 +11,7 @@ namespace Kafka;
 use Kafka\Exception\Config as ExceptionConfig;
 
 class ProducerConfig extends Config {
-    use \SingletonTrait;
+    use SingletonTrait;
 
     protected static $defaults = [
         'requiredAck'     => 1,
