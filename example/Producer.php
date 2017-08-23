@@ -29,10 +29,12 @@ $producer = new \Kafka\Producer(function() {
 });
 
 $producer->success(function($result) {
+    echo 123;
     var_dump($result);
 });
 
 $producer->error(function($errorCode) {
+    echo 456;
     var_dump($errorCode);
 });
 $producer->send(true);
