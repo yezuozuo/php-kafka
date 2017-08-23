@@ -9,7 +9,7 @@
 namespace Kafka;
 
 class Broker {
-    use \SingletonTrait;
+    use SingletonTrait;
 
     private $groupBrokerId = null;
 
@@ -163,9 +163,9 @@ class Broker {
         }
 
         if ($modeSync) {
-            $socket = new \Kafka\SocketSync($host, $port);
+            $socket = new SocketSync($host, $port);
         } else {
-            $socket = new \Kafka\Socket($host, $port);
+            $socket = new Socket($host, $port);
         }
 
         return $socket;
