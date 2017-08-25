@@ -10,7 +10,10 @@ namespace Kafka\Exception;
 
 use \Kafka\Exception;
 
-class NotSupported extends Exception {
-
-}
+/**
+ * Class NotSupported
+ *
+ * @package Kafka\Exception
+ */
+class NotSupported extends Exception {}
 

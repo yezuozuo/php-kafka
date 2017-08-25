@@ -11,5 +11,9 @@ namespace Kafka\Exception;
 
 use \Kafka\Exception;
 
-class Socket extends Exception {
-}
+/**
+ * Class Socket
+ *
+ * @package Kafka\Exception
+ */
+class Socket extends Exception {}

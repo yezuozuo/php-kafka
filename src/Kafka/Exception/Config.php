@@ -10,5 +10,9 @@ namespace Kafka\Exception;
 
 use \Kafka\Exception;
 
-class Config extends Exception {
-}
+/**
+ * Class Config
+ *
+ * @package Kafka\Exception
+ */
+class Config extends Exception {}

@@ -8,33 +8,54 @@
 
 namespace Kafka\Producer;
 
+use Kafka\Exception\Protocol;
 use Kafka\LoggerTrait;
 use Kafka\ProducerConfig;
 use Psr\Log\LoggerAwareTrait;
 
-class Process
-{
+/**
+ * Class Process
+ *
+ * @package Kafka\Producer
+ */
+class Process {
+
     use LoggerAwareTrait;
     use LoggerTrait;
 
+    /**
+     * @var \Closure|null
+     */
     protected $producer = null;
 
+    /**
+     * @var bool
+     */
     protected $isRunning = true;
 
+    /**
+     * @var null
+     */
     protected $success = null;
 
+    /**
+     * @var null
+     */
     protected $error = null;
 
-    public function __construct(\Closure $producer = null)
-    {
+    /**
+     * Process constructor.
+     *
+     * @param \Closure|null $producer
+     */
+    public function __construct(\Closure $producer = null) {
         $this->producer = $producer;
     }
 
-    public function init()
-    {
+    public function init() {
         // init protocol
         $config = ProducerConfig::getInstance();
-        \Kafka\Protocol::init($config->getBrokerVersion(), $this->logger);
+        Protocol::init($config->getBrokerVersion(), $this->logger);
 
         // init process request
         $broker = \Kafka\Broker::getInstance();
@@ -51,7 +72,7 @@ class Process
             \Kafka\Producer\State::REQUEST_METADATA => function () {
                 return $this->syncMeta();
             },
-            \Kafka\Producer\State::REQUEST_PRODUCE => function () {
+            \Kafka\Producer\State::REQUEST_PRODUCE  => function () {
                 return $this->produce();
             },
         ));
@@ -72,8 +93,7 @@ class Process
      * @access public
      * @return void
      */
-    public function start()
-    {
+    public function start() {
         $this->init();
         $this->state->start();
         $config = \Kafka\ProducerConfig::getInstance();
@@ -98,8 +118,7 @@ class Process
      * @access public
      * @return void
      */
-    public function stop()
-    {
+    public function stop() {
         $this->isRunning = false;
     }
 
@@ -112,8 +131,7 @@ class Process
      * @access public
      * @return void
      */
-    public function setSuccess($success)
-    {
+    public function setSuccess($success) {
         $this->success = $success;
     }
 
@@ -126,13 +144,11 @@ class Process
      * @access public
      * @return void
      */
-    public function setError($error)
-    {
+    public function setError($error) {
         $this->error = $error;
     }
 
-    public function syncMeta()
-    {
+    public function syncMeta() {
         $this->debug('Start sync metadata request');
         $brokerList = explode(',', \Kafka\ProducerConfig::getInstance()->getMetadataBrokerList());
         $brokerHost = array();
@@ -153,6 +169,7 @@ class Process
                 $this->debug('Start sync metadata request params:' . json_encode($params));
                 $requestData = \Kafka\Protocol::encode(\Kafka\Protocol::METADATA_REQUEST, $params);
                 $socket->write($requestData);
+
                 return;
             }
         }
@@ -168,8 +185,7 @@ class Process
      * @access public
      * @return void
      */
-    protected function processRequest($data, $fd)
-    {
+    protected function processRequest($data, $fd) {
         $correlationId = \Kafka\Protocol\Protocol::unpack(\Kafka\Protocol\Protocol::BIT_B32, substr($data, 0, 4));
         switch ($correlationId) {
             case \Kafka\Protocol::METADATA_REQUEST:
@@ -178,7 +194,7 @@ class Process
                     $this->error('Get metadata is fail, brokers or topics is null.');
                     $this->state->failRun(\Kafka\Producer\State::REQUEST_METADATA);
                 } else {
-                    $broker = \Kafka\Broker::getInstance();
+                    $broker   = \Kafka\Broker::getInstance();
                     $isChange = $broker->setData($result['topics'], $result['brokers']);
                     $this->state->succRun(\Kafka\Producer\State::REQUEST_METADATA, $isChange);
                 }
@@ -195,12 +211,11 @@ class Process
     // }}}
     // {{{ protected function produce()
 
-    protected function produce()
-    {
-        $context = array();
-        $broker = \Kafka\Broker::getInstance();
+    protected function produce() {
+        $context     = array();
+        $broker      = \Kafka\Broker::getInstance();
         $requiredAck = \Kafka\ProducerConfig::getInstance()->getRequiredAck();
-        $timeout = \Kafka\ProducerConfig::getInstance()->getTimeout();
+        $timeout     = \Kafka\ProducerConfig::getInstance()->getTimeout();
 
         // get send message
         // data struct
@@ -221,10 +236,10 @@ class Process
             }
 
             $requiredAck = \Kafka\ProducerConfig::getInstance()->getRequiredAck();
-            $params = array(
+            $params      = array(
                 'required_ack' => $requiredAck,
-                'timeout' => \Kafka\ProducerConfig::getInstance()->getTimeout(),
-                'data' => $topicList,
+                'timeout'      => \Kafka\ProducerConfig::getInstance()->getTimeout(),
+                'data'         => $topicList,
             );
             $this->debug("Send message start, params:" . json_encode($params));
             $requestData = \Kafka\Protocol::encode(\Kafka\Protocol::PRODUCE_REQUEST, $params);
@@ -242,8 +257,7 @@ class Process
     // }}}
     // {{{ protected function succProduce()
 
-    protected function succProduce($result, $fd)
-    {
+    protected function succProduce($result, $fd) {
         $msg = sprintf('Send message sucess, result: %s', json_encode($result));
         $this->debug($msg);
         if ($this->success) {
@@ -255,8 +269,7 @@ class Process
     // }}}
     // {{{ protected function stateConvert()
 
-    protected function stateConvert($errorCode, $context = null)
-    {
+    protected function stateConvert($errorCode, $context = null) {
         $retry = false;
         $this->error(\Kafka\Protocol::getError($errorCode));
         if ($this->error) {
@@ -279,18 +292,19 @@ class Process
         );
         if (in_array($errorCode, $recoverCodes)) {
             $this->state->recover();
+
             return false;
         }
+
         return true;
     }
 
     // }}}
     // {{{ protected function convertMessage()
 
-    protected function convertMessage($data)
-    {
-        $sendData = array();
-        $broker = \Kafka\Broker::getInstance();
+    protected function convertMessage($data) {
+        $sendData   = array();
+        $broker     = \Kafka\Broker::getInstance();
         $topicInfos = $broker->getTopics();
         foreach ($data as $value) {
             if (!isset($value['topic']) || !trim($value['topic'])) {
@@ -310,7 +324,7 @@ class Process
             }
 
             $topicMeta = $topicInfos[$value['topic']];
-            $partNums = array_keys($topicMeta);
+            $partNums  = array_keys($topicMeta);
             shuffle($partNums);
             if (!isset($value['partId']) || !isset($topicMeta[$value['partId']])) {
                 $partId = $partNums[0];
@@ -318,7 +332,7 @@ class Process
                 $partId = $value['partId'];
             }
 
-            $brokerId = $topicMeta[$partId];
+            $brokerId  = $topicMeta[$partId];
             $topicData = array();
             if (isset($sendData[$brokerId][$value['topic']])) {
                 $topicData = $sendData[$brokerId][$value['topic']];
@@ -336,8 +350,8 @@ class Process
                 $partition['messages'][] = $value['value'];
             }
 
-            $topicData['partitions'][$partId] = $partition;
-            $topicData['topic_name'] = $value['topic'];
+            $topicData['partitions'][$partId]     = $partition;
+            $topicData['topic_name']              = $value['topic'];
             $sendData[$brokerId][$value['topic']] = $topicData;
         }
 
